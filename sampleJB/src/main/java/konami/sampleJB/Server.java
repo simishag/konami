@@ -1,7 +1,10 @@
 package konami.sampleJB;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
@@ -19,6 +22,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 public class Server {
@@ -64,18 +68,39 @@ public class Server {
         String errorMsg;
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         try {
-            // process input
-            InputStream inputStream = socket.getInputStream();
-            DocumentBuilder db = dbf.newDocumentBuilder();
-            Document doc = db.parse(inputStream);
-            ArrayList<RequestData> data = parseXML(doc);
-            logger.info("data rows: " + data.size());
+            // read data from socket
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            String s;
+            String xmlData = new String();
+            while (in.ready()) {
+                s = in.readLine();
+                if (s == null) {
+                    break;
+                }
+                xmlData += s;
+            }
+            logger.debug("xmlData: " + xmlData);
 
-            // input is valid, send response
+            // create separate stream here for xml parser
+            ByteArrayInputStream stream = new ByteArrayInputStream(xmlData.getBytes());
+
+            // parse & process xml
+            DocumentBuilder db = dbf.newDocumentBuilder();
+            Document doc = db.parse(stream);
+            Request request = processXML(doc);
+            logger.info("data rows: " + request.getData().size());
+
+            // input is valid
+            // output data to console
             Date date = new Date();
+            String msg = "Command: " + request.getCommand() + ": " + date;
+            System.out.println(msg);
+
+            // send response to client
             String response = "Message Received at " + date;
-            OutputStream outputStream = socket.getOutputStream();
-            outputStream.write(response.getBytes());
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            out.println(response);
+            
         } catch (SAXException e) {
             errorMsg = "Invalid XML";
             logger.warn(errorMsg, e);
@@ -94,13 +119,21 @@ public class Server {
             } catch (IOException e) {
             }
         }
+    }
 
+    /*
+     * Trick to convert input stream into string
+     */
+    protected String convertStreamToString(java.io.InputStream is) {
+        java.util.Scanner s = new java.util.Scanner(is).useDelimiter("\\A");
+        return s.hasNext() ? s.next() : "";
     }
 
     /*
      * Parse & validate the XML input request
      */
-    protected ArrayList<RequestData> parseXML(Document doc) throws ServerException {
+    protected Request processXML(Document doc) throws ServerException {
+        Request request = new Request();
         ArrayList<RequestData> list = new ArrayList<RequestData>();
 
         NodeList mainList = doc.getElementsByTagName("Message");
@@ -116,6 +149,8 @@ public class Server {
             throw new ServerException("XML request is missing required element: Command");
         }
         Element command = (Element) commandList.item(0);
+        request.setCommand(command.getTextContent());
+        
         NodeList dataList = message.getElementsByTagName("Data");
         if (dataList == null || dataList.getLength() == 0) {
             throw new ServerException("XML request is missing required element: Data");
@@ -151,6 +186,7 @@ public class Server {
             list.add(new RequestData(description, value));
         }
 
-        return list;
+        request.setData(list);
+        return request;
     }
 }

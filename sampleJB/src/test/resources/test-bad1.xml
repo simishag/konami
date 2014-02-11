@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Message>
+	<Data>
+		<Row>
+			<Description>Name</Description>
+			<Value>Joe Chase</Value>
+		</Row>
+		<Row>
+			<Description>Address</Description>
+			<Value>123 Anywhere Lane</Value>
+		</Row>
+	</Data>
+</Message>
