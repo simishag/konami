@@ -34,4 +34,6 @@ Test classes include:
 ServerTest - tests Server with various good & bad XML files
 
 The project relies solely on standard Java APIs. No external libraries were
-used, with the exception of JUnit for unit testing and log4j for logging.  
+used, with the exception of JUnit for unit testing and log4j for logging.
+
+Test message
