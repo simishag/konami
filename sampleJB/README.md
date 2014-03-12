@@ -39,3 +39,5 @@ used, with the exception of JUnit for unit testing and log4j for logging.
 Test message
 
 Test message 2
+
+Test message 3
